@@ -1,5 +1,8 @@
+/*
+ * Copyright 2023 Kapeta Inc.
+ * SPDX-License-Identifier: MIT
+ */
 package com.kapeta.spring.rabbitmq;
-
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kapeta.spring.config.providers.KapetaConfigurationProvider;
