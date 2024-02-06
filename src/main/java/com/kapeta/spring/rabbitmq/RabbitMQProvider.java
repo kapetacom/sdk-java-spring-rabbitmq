@@ -51,6 +51,7 @@ public class RabbitMQProvider<T> implements BeanFactoryPostProcessor {
         this.payloadType = payloadType;
         this.instances = rabbitConnectionManager.forProvider(resourceName);
 
+
         this.templates = instances.stream()
                 .map(this::configureExchanges)
                 .collect(Collectors.toSet());
@@ -133,8 +134,12 @@ public class RabbitMQProvider<T> implements BeanFactoryPostProcessor {
 
         });
 
-        exchanges.forEach(rabbitHelper::exchangeEnsure);
-        exchangeBindings.forEach(rabbitHelper::bindingEnsure);
+        rabbitConnectionManager.getConnectionFactory(connection)
+                .addConnectionListener((c) -> {
+            log.info("Got connection for provider {}", resourceName);
+            exchanges.forEach(rabbitHelper::exchangeEnsure);
+            exchangeBindings.forEach(rabbitHelper::bindingEnsure);
+        });
 
         return template;
     }

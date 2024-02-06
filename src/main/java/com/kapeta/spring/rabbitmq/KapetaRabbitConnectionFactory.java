@@ -32,9 +32,6 @@ public class KapetaRabbitConnectionFactory {
 
     public static final String PORT_AMQP = "amqp";
 
-    private static final int MAX_ATTEMPTS = 100;
-    private static final int WAIT_INTERVAL = 1000;
-
     private final Map<String, ConnectionFactory> rabbitFactories = new HashMap<>();
     private final Map<String, org.springframework.amqp.rabbit.connection.ConnectionFactory> factories = new HashMap<>();
     private final Map<String, RabbitTemplate> templates = new HashMap<>();
@@ -103,20 +100,11 @@ public class KapetaRabbitConnectionFactory {
     public void verifyConnection(RabbitConnection connection) {
         var factory = createConnectionFactory(connection);
 
-        int attempts = 0;
-        while (attempts < MAX_ATTEMPTS) {
+        defaultRetryTemplate().execute(context -> {
             try (var conn = factory.createConnection()) {
                 conn.createChannel(false);
-                return;
-            } catch (AmqpIOException e) {
-                attempts++;
-                try {
-                    log.warn("Failed to connect to RabbitMQ", e);
-                    Thread.sleep(WAIT_INTERVAL);
-                } catch (InterruptedException ex) {
-                    throw new RuntimeException("Failed to connect to RabbitMQ", e);
-                }
             }
-        }
+            return null;
+        });
     }
 }

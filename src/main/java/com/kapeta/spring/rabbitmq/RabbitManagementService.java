@@ -14,6 +14,8 @@ import org.springframework.web.client.RestTemplate;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
+import static com.kapeta.spring.rabbitmq.RabbitHelper.defaultRetryTemplate;
+
 /**
  * RabbitMQ management service - used to ensure vhosts and other management operations.
  */
@@ -22,7 +24,7 @@ public class RabbitManagementService {
 
     public static final String PORT_API = "management";
 
-    private final RestTemplate restTemplate = new RestTemplate();;
+    private final RestTemplate restTemplate = new RestTemplate();
 
     public void ensureVHost(RabbitConnection connection) {
         int port = 15672;
@@ -46,11 +48,15 @@ public class RabbitManagementService {
 
         log.info("Ensuring RabbitMQ vhost: {} @ {}:{}", vhost, operator.getHostname(), port);
 
-        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.PUT, entity, String.class);
-        if (!response.getStatusCode().is2xxSuccessful()) {
-            throw new RuntimeException("Failed to create vhost: %s - HTTP status: %s".formatted(vhost, response.getStatusCode()));
-        }
+        defaultRetryTemplate().execute(context -> {
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.PUT, entity, String.class);
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                throw new RuntimeException("Failed to create vhost: %s - HTTP status: %s".formatted(vhost, response.getStatusCode()));
+            }
+            return null;
+        });
 
         log.info("RabbitMQ vhost: {} @ {}:{} is ensured", vhost, operator.getHostname(), port);
+
     }
 }
