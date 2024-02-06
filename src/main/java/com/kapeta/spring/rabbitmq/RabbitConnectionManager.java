@@ -36,10 +36,6 @@ public class RabbitConnectionManager {
         this.connectionFactory = connectionFactory;
     }
 
-    public MessageConverter getMessageConverter() {
-        return connectionFactory.getMessageConverter();
-    }
-
     public List<RabbitConnection> forProvider(String providerResourceName) {
         return config.getInstancesForProvider(providerResourceName).stream().map(this::addInstance).toList();
     }
@@ -54,8 +50,8 @@ public class RabbitConnectionManager {
         return connectionFactory.createAdmin(connection);
     }
 
-    public RabbitTemplate getTemplate(RabbitConnection connection) {
-        return connectionFactory.createTemplate(connection);
+    public <T> RabbitTemplate getTemplate(RabbitConnection connection, Class<T> payloadType) {
+        return connectionFactory.createTemplate(connection, payloadType);
     }
 
     public ConnectionFactory getConnectionFactory(RabbitConnection connection) {

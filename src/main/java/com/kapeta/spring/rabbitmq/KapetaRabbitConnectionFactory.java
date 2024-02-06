@@ -4,6 +4,7 @@
  */
 package com.kapeta.spring.rabbitmq;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rabbitmq.client.ConnectionFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.AmqpIOException;
@@ -38,14 +39,11 @@ public class KapetaRabbitConnectionFactory {
     private final Map<String, org.springframework.amqp.rabbit.connection.ConnectionFactory> factories = new HashMap<>();
     private final Map<String, RabbitTemplate> templates = new HashMap<>();
     private final Map<String, RabbitAdmin> admins = new HashMap<>();
-    private final MessageConverter messageConverter;
 
-    public KapetaRabbitConnectionFactory(MessageConverter messageConverter) {
-        this.messageConverter = messageConverter;
-    }
+    private final ObjectMapper objectMapper;
 
-    public MessageConverter getMessageConverter() {
-        return messageConverter;
+    public KapetaRabbitConnectionFactory(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
     }
 
     public ConnectionFactory createRabbitConnectionFactory(RabbitConnection connection) {
@@ -83,19 +81,19 @@ public class KapetaRabbitConnectionFactory {
             if (admins.containsKey(connection.getInstanceId())) {
                 return admins.get(connection.getInstanceId());
             }
-            var out = new RabbitAdmin(createTemplate(connection));
+            var out = new RabbitAdmin(createConnectionFactory(connection));
             admins.put(connection.getInstanceId(), out);
             return out;
         }
     }
 
-    public RabbitTemplate createTemplate(RabbitConnection connection) {
+    public <T> RabbitTemplate createTemplate(RabbitConnection connection, Class<T> payloadType) {
         synchronized (templates) {
             if (templates.containsKey(connection.getInstanceId())) {
                 return templates.get(connection.getInstanceId());
             }
             var out = new RabbitTemplate(createConnectionFactory(connection));
-            out.setMessageConverter(messageConverter);
+            out.setMessageConverter(new TypedMessageConverter<T>(objectMapper, payloadType));
             out.setRetryTemplate(defaultRetryTemplate());
             templates.put(connection.getInstanceId(), out);
             return out;

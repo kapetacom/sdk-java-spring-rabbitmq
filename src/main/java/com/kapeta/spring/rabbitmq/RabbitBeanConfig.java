@@ -35,8 +35,8 @@ public class RabbitBeanConfig {
 
     @Bean
     @ConditionalOnMissingBean(KapetaRabbitConnectionFactory.class)
-    public KapetaRabbitConnectionFactory kapetaRabbitConnectionFactory(ObjectProvider<MessageConverter> messageConverter) {
-        return new KapetaRabbitConnectionFactory(messageConverter.getIfUnique());
+    public KapetaRabbitConnectionFactory kapetaRabbitConnectionFactory(ObjectMapper objectMapper) {
+        return new KapetaRabbitConnectionFactory(objectMapper);
     }
 
     @Bean
