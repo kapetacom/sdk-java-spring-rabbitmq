@@ -15,7 +15,9 @@ import org.springframework.util.CollectionUtils;
 
 import java.util.*;
 
-
+/**
+ * RabbitMQ connection manager - keeps track of rabbitmq connections and their respective vhosts.
+ */
 @Slf4j
 public class RabbitConnectionManager {
 

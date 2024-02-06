@@ -14,6 +14,9 @@ import org.springframework.web.client.RestTemplate;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
+/**
+ * RabbitMQ management service - used to ensure vhosts and other management operations.
+ */
 @Slf4j
 public class RabbitManagementService {
 

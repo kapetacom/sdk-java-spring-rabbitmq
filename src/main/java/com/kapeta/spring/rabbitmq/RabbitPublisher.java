@@ -11,6 +11,11 @@ import org.springframework.amqp.rabbit.core.RabbitOperations;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Publisher for a specific payload type using JSON.
+ * <p>
+ * Use this class to publish messages to RabbitMQ.
+ */
 @Getter
 public class RabbitPublisher<T> {
 

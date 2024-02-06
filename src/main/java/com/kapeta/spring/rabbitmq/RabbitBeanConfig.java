@@ -16,6 +16,9 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean;
 import org.springframework.web.client.RestTemplate;
 
+/**
+ * Sets up the beans for RabbitMQ.
+ */
 public class RabbitBeanConfig {
 
     @Bean
@@ -43,11 +46,5 @@ public class RabbitBeanConfig {
             RabbitManagementService managementService,
             KapetaRabbitConnectionFactory connectionFactory) {
         return new RabbitConnectionManager(config, managementService, connectionFactory);
-    }
-
-
-    @Bean
-    private MessageConverter messageConverter(ObjectMapper objectMapper) {
-        return new Jackson2JsonMessageConverter(objectMapper, "com.kapeta.*");
     }
 }

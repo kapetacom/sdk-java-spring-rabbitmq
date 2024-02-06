@@ -13,6 +13,9 @@ import org.springframework.context.annotation.Bean;
 
 import java.util.Map;
 
+/**
+ * Configuration for RabbitMQ health indicators.
+ */
 public class RabbitHealthConfiguration extends CompositeHealthContributorConfiguration<RabbitHealthIndicator, RabbitTemplate> {
     public RabbitHealthConfiguration() {
         super(RabbitHealthIndicator::new);

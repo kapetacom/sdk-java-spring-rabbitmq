@@ -13,6 +13,10 @@ import org.springframework.amqp.support.converter.MessageConverter;
 
 import java.io.IOException;
 
+/**
+ * Message converter for a specific payload type using JSON.
+ * @param <T>
+ */
 public class TypedMessageConverter<T> implements MessageConverter {
     private final ObjectMapper objectMapper;
     private final Class<T> payloadClass;

@@ -19,12 +19,15 @@ import org.springframework.util.StringUtils;
 
 import java.util.UUID;
 
+/**
+ * RabbitMQ connection details.
+ */
 @Getter
 public class RabbitConnection {
-    public static final String PORT_AMQP = "amqp";
-
     private final BlockInstanceDetails<RabbitMQBlockDefinition> instance;
+
     private final InstanceOperator<RabbitOperatorOptions, DefaultCredentials> operator;
+
     private final String vhost;
 
     public RabbitConnection(BlockInstanceDetails<RabbitMQBlockDefinition> instance, InstanceOperator<RabbitOperatorOptions, DefaultCredentials> operator) {

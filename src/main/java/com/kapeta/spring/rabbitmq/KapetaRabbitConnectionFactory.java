@@ -23,6 +23,9 @@ import java.util.UUID;
 
 import static com.kapeta.spring.rabbitmq.RabbitHelper.defaultRetryTemplate;
 
+/**
+ * Creates and manages RabbitMQ connections.
+ */
 @Slf4j
 public class KapetaRabbitConnectionFactory {
 

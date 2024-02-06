@@ -26,6 +26,9 @@ import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
 
+/**
+ * Utility class for RabbitMQ operations.
+ */
 @Slf4j
 public class RabbitHelper {
 

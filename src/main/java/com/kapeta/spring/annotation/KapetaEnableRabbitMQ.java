@@ -12,7 +12,7 @@ import org.springframework.context.annotation.Import;
 import java.lang.annotation.*;
 
 /**
- * Add this to your Application class to enable mongodb support
+ * Add this to your Application class to enable rabbitmq support
  */
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)

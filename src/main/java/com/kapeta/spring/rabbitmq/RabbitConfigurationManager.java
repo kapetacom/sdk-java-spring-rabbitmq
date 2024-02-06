@@ -15,6 +15,9 @@ import org.springframework.web.client.RestTemplate;
 import java.io.IOException;
 import java.util.List;
 
+/**
+ * Wrapper class for getting RabbitMQ configuration.
+ */
 public class RabbitConfigurationManager {
 
     private final KapetaConfigurationProvider config;
