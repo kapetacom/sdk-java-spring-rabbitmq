@@ -56,7 +56,6 @@ public class RabbitMQConsumer<T> implements BeanFactoryPostProcessor {
         this.instance = connection.getInstance();
         this.payloadType = payloadType;
 
-
         List<RabbitMQQueueResource> queueResources = getTargetedQueues(instance);
 
         if (queueResources.isEmpty()) {
@@ -70,6 +69,11 @@ public class RabbitMQConsumer<T> implements BeanFactoryPostProcessor {
         this.queue = queueResources.get(0);
         this.queueName = queue.getMetadata().getName();
         this.connectionFactory = rabbitConnectionManager.getConnectionFactory(connection);
+
+        connectionFactory.addConnectionListener((connection) -> {
+            log.info("Got connection for consumer {}", resourceName);
+            configureConsumer();
+        });
     }
 
     public ConnectionFactory getConnectionFactory() {
@@ -84,9 +88,7 @@ public class RabbitMQConsumer<T> implements BeanFactoryPostProcessor {
         return payloadType;
     }
 
-    @Override
-    public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
-        var beanHelper = new BeanHelper(beanFactory);
+    private void configureConsumer() {
 
         RabbitMQBlockDefinition rabbitBlock = instance.getBlock();
 
@@ -119,16 +121,16 @@ public class RabbitMQConsumer<T> implements BeanFactoryPostProcessor {
                 });
 
         Queue queueOptions = rabbitHelper.asQueue(queue);
+
         rabbitHelper.queueEnsure(queueOptions);
-        beanHelper.registerBean(beanName("queue",queueOptions.getName()), Queue.class, queueOptions);
-
         exchanges.forEach(rabbitHelper::exchangeEnsure);
-        exchanges.forEach(exchange -> beanHelper.registerBean(beanName("exchange",exchange.getName()), Exchange.class, exchange));
-
         queueBindings.forEach(rabbitHelper::bindingEnsure);
-        queueBindings.forEach(binding -> beanHelper.registerBean(Binding.class, binding));
+    }
 
-        beanHelper.registerBean(RabbitConnection.class, connection);
+    @Override
+    public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+        var beanHelper = new BeanHelper(beanFactory);
+
 
         registerTemplate(beanHelper, rabbitConnectionManager.getTemplate(connection, payloadType));
     }
