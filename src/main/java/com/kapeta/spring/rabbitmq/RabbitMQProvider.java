@@ -34,7 +34,7 @@ import static com.kapeta.spring.rabbitmq.RabbitHelper.registerTemplate;
  * RabbitMQ provider configuration class.
  */
 @Slf4j
-public class RabbitMQProvider implements BeanFactoryPostProcessor {
+public class RabbitMQProvider<T> implements BeanFactoryPostProcessor {
 
     protected final RabbitConnectionManager rabbitConnectionManager;
 
@@ -43,10 +43,12 @@ public class RabbitMQProvider implements BeanFactoryPostProcessor {
     private final List<RabbitConnection> instances;
     private final Set<RabbitTemplate> templates;
     private final RabbitOperations template;
+    private final Class<T> payloadType;
 
-    public RabbitMQProvider(RabbitConnectionManager rabbitConnectionManager, String resourceName) {
+    public RabbitMQProvider(RabbitConnectionManager rabbitConnectionManager, String resourceName, Class<T> payloadType) {
         this.rabbitConnectionManager = rabbitConnectionManager;
         this.resourceName = resourceName;
+        this.payloadType = payloadType;
         this.instances = rabbitConnectionManager.forProvider(resourceName);
 
         this.templates = instances.stream()
@@ -101,7 +103,7 @@ public class RabbitMQProvider implements BeanFactoryPostProcessor {
         // Get the defined exchanges that this publisher should publish to
         List<RabbitMQExchangeResource> exchangeDefinitions = getTargetedExchanges(instance);
 
-        var template = rabbitConnectionManager.getTemplate(connection);
+        var template = rabbitConnectionManager.getTemplate(connection, payloadType);
 
         exchangeDefinitions.forEach(exchange -> {
             String exchangeName = exchange.getMetadata().getName();

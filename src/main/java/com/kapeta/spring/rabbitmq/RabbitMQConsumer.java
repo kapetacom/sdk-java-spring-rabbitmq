@@ -130,7 +130,7 @@ public class RabbitMQConsumer<T> implements BeanFactoryPostProcessor {
 
         beanHelper.registerBean(RabbitConnection.class, connection);
 
-        registerTemplate(beanHelper, rabbitConnectionManager.getTemplate(connection));
+        registerTemplate(beanHelper, rabbitConnectionManager.getTemplate(connection, payloadType));
     }
 
     private String beanName(String type, String name) {

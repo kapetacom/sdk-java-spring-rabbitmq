@@ -10,6 +10,7 @@ import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.support.converter.MessageConversionException;
 import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.amqp.support.converter.MessagingMessageConverter;
 
 import java.io.IOException;
 
@@ -20,6 +21,12 @@ import java.io.IOException;
 public class TypedMessageConverter<T> implements MessageConverter {
     private final ObjectMapper objectMapper;
     private final Class<T> payloadClass;
+
+    public static <T> MessagingMessageConverter createMessagingConverter(ObjectMapper objectMapper, Class<T> payloadClass) {
+        var messaging = new MessagingMessageConverter();
+        messaging.setPayloadConverter(new TypedMessageConverter<T>(objectMapper, payloadClass));
+        return messaging;
+    }
 
     public TypedMessageConverter(ObjectMapper objectMapper, Class<T> payloadClass) {
         this.objectMapper = objectMapper;

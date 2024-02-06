@@ -29,10 +29,7 @@ public class KapetaMessageListenerContainer<T> extends SimpleMessageListenerCont
 
     private MessageListenerAdapter createAdapter(KapetaMessageListener<T> listener) {
         var adapter = new MessageListenerAdapter(listener, "onMessage");
-
-        var messaging = new MessagingMessageConverter();
-        messaging.setPayloadConverter(new TypedMessageConverter<T>(objectMapper, consumer.getPayloadType()));
-        adapter.setMessageConverter(messaging);
+        adapter.setMessageConverter(TypedMessageConverter.createMessagingConverter(objectMapper, consumer.getPayloadType()));
         return adapter;
     }
 
