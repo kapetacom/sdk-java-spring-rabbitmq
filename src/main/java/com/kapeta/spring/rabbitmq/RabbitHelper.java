@@ -58,14 +58,15 @@ public class RabbitHelper {
         rabbitAdmin.declareExchange(exchange);
     }
 
-    public void queueEnsure(Queue queueOptions) {
+    public String queueEnsure(Queue queueOptions) {
         log.info("Ensuring queue {} on {}", queueOptions, getRabbitName());
-        rabbitAdmin.declareQueue(queueOptions);
+        return rabbitAdmin.declareQueue(queueOptions);
     }
 
     public Queue asQueue(RabbitMQQueueResource queue) {
+        var queueName = queue.getSpec().isExclusive() ? "" : queue.getMetadata().getName();
         return new Queue(
-                queue.getMetadata().getName(),
+                queueName,
                 queue.getSpec().isDurable(),
                 queue.getSpec().isExclusive(),
                 queue.getSpec().isAutoDelete()
