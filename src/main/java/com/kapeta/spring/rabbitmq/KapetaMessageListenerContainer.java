@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kapeta.spring.config.KapetaDefaultConfig;
 import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
 import org.springframework.amqp.rabbit.listener.adapter.MessageListenerAdapter;
-import org.springframework.amqp.support.converter.MessagingMessageConverter;
 
 public class KapetaMessageListenerContainer<T> extends SimpleMessageListenerContainer {
     private final RabbitMQConsumer<T> consumer;
@@ -25,6 +24,10 @@ public class KapetaMessageListenerContainer<T> extends SimpleMessageListenerCont
         this.objectMapper = objectMapper;
         setQueueNames(consumer.getQueueName());
         setMessageListener(createAdapter(listener));
+
+        // We need to re-set the queue names when the connection is re-established
+        // since the queue may be named by the server
+        consumer.addReconnectionListener(() -> setQueueNames(consumer.getQueueName()));
     }
 
     private MessageListenerAdapter createAdapter(KapetaMessageListener<T> listener) {

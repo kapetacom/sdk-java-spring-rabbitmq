@@ -12,8 +12,6 @@ import com.kapeta.spring.rabbitmq.types.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
-import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
-import org.springframework.amqp.rabbit.listener.adapter.MessageListenerAdapter;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
@@ -40,13 +38,15 @@ public class RabbitMQConsumer<T> implements BeanFactoryPostProcessor {
 
     private final BlockInstanceDetails<RabbitMQBlockDefinition> instance;
 
-    private final String queueName;
-
     private final RabbitMQQueueResource queue;
 
     private final ConnectionFactory connectionFactory;
 
     private final Class<T> payloadType;
+
+    private final List<Runnable> reconnectionListeners = new ArrayList<>();
+
+    private String queueName;
 
     public RabbitMQConsumer(RabbitConnectionManager rabbitConnectionManager, String resourceName, Class<T> payloadType) {
         this.rabbitConnectionManager = rabbitConnectionManager;
@@ -73,11 +73,22 @@ public class RabbitMQConsumer<T> implements BeanFactoryPostProcessor {
         connectionFactory.addConnectionListener((connection) -> {
             log.info("Got connection for consumer {}", resourceName);
             configureConsumer();
+            reconnectionListeners.forEach(Runnable::run);
         });
     }
 
     public ConnectionFactory getConnectionFactory() {
         return connectionFactory;
+    }
+
+    /**
+     * Add a listener to be called when the connection is re-established.
+     *
+     * Returns a runnable that can be used to remove the listener.
+     */
+    public Runnable addReconnectionListener(Runnable listener) {
+        reconnectionListeners.add(listener);
+        return () -> reconnectionListeners.remove(listener);
     }
 
     public String getQueueName() {
@@ -95,7 +106,11 @@ public class RabbitMQConsumer<T> implements BeanFactoryPostProcessor {
         List<Exchange> exchanges = new ArrayList<>();
         List<Binding> queueBindings = new ArrayList<>();
 
-        rabbitBlock.getSpec().getBindings().getExchanges()
+        Queue queueOptions = rabbitHelper.asQueue(queue);
+
+        rabbitBlock.getSpec()
+                .getBindings()
+                .getExchanges()
                 .forEach(exchangeBindings -> {
                     var exchangeName = exchangeBindings.getExchange();
                     var exchange = getExchangeForName(rabbitBlock, exchangeName);
@@ -108,21 +123,19 @@ public class RabbitMQConsumer<T> implements BeanFactoryPostProcessor {
                     }
 
                     exchangeBindings.getBindings().stream()
-                            .filter(bindings -> isBindingForQueue(bindings, queueName))
+                            .filter(bindings -> isBindingForQueue(bindings, resourceName))
                             .forEach(bindings -> {
-                                log.info("Binding exchange {} to queue {} with routing key {}", exchangeName, queueName, bindings.getRouting());
+                                log.info("Binding exchange {} to queue {} with routing key {}", exchangeName, queueOptions.getName(), bindings.getRouting());
                                 queueBindings.add(rabbitHelper.asBinding(
                                         Binding.DestinationType.QUEUE,
                                         bindings,
-                                        queueName,
+                                        queueOptions.getName(),
                                         exchangeName
                                 ));
                             });
                 });
 
-        Queue queueOptions = rabbitHelper.asQueue(queue);
-
-        rabbitHelper.queueEnsure(queueOptions);
+        queueName = rabbitHelper.queueEnsure(queueOptions);
         exchanges.forEach(rabbitHelper::exchangeEnsure);
         queueBindings.forEach(rabbitHelper::bindingEnsure);
     }
@@ -130,7 +143,6 @@ public class RabbitMQConsumer<T> implements BeanFactoryPostProcessor {
     @Override
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
         var beanHelper = new BeanHelper(beanFactory);
-
 
         registerTemplate(beanHelper, rabbitConnectionManager.getTemplate(connection, payloadType));
     }
