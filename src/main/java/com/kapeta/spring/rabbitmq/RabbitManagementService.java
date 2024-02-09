@@ -12,6 +12,8 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
 import java.net.URLEncoder;
@@ -45,26 +47,37 @@ public class RabbitManagementService {
         // We ask for queues on the vhost since that does not require any special permissions.
         // and will return 404 if the vhost does not exist.
         // It will return 401 if the vhost exist, but we do not have access.
-        ResponseEntity<String> queueResponse = restTemplate.exchange(getQueuesUrl, HttpMethod.GET, entity, String.class);
-
-        if (queueResponse.getStatusCode().is2xxSuccessful()) {
+        try {
+            restTemplate.exchange(getQueuesUrl, HttpMethod.GET, entity, String.class);
             log.info("RabbitMQ vhost: {} @ {} was found", vhost, rabbitMQServer);
             return;
-        }
-
-        if (queueResponse.getStatusCode().value() != 404) {
-            // If we get here it likely means we do not have access to the vhost
-            // or we do not have access to the management API
-            throw new RuntimeException("Failed to get vhost: %s - HTTP status: %s".formatted(vhost, queueResponse.getStatusCode()));
-        }
-
-        defaultRetryTemplate().execute(context -> {
-            ResponseEntity<String> createVhostResponse = restTemplate.exchange(createVhostsUrl, HttpMethod.PUT, entity, String.class);
-            if (createVhostResponse.getStatusCode().value() > 499) {
-                throw new RuntimeException("Failed to create vhost: %s - HTTP status: %s".formatted(vhost, createVhostResponse.getStatusCode()));
+        } catch (RestClientResponseException e) {
+            if (e.getStatusCode().value() != 404) {
+                // If we get here it likely means we do not have access to the vhost
+                // or we do not have access to the management API
+                throw new IllegalStateException("Failed to get vhost: %s @ %s - HTTP status: %s".formatted(vhost, rabbitMQServer, e.getStatusCode().value()), e);
             }
-            return null;
+        }
+
+
+        var wasCreated = defaultRetryTemplate().execute(context -> {
+            try {
+                restTemplate.exchange(createVhostsUrl, HttpMethod.PUT, entity, String.class);
+                return true;
+            } catch (RestClientResponseException e) {
+                if (e.getStatusCode().value() != 499) {
+                    // If we get here it likely means we do not have access to the vhost
+                    // or we do not have access to the management API
+                    throw new IllegalStateException("Failed to create vhost: %s @ %s - HTTP status: %s".formatted(vhost, rabbitMQServer, e.getStatusCode()));
+                }
+                log.error("Failed to create vhost: {} @ {}", vhost, rabbitMQServer, e);
+            }
+            return false;
         });
+
+        if (!wasCreated) {
+            throw new IllegalStateException("Failed to create vhost: %s".formatted(vhost));
+        }
 
         log.info("RabbitMQ vhost: {} @ {} was created", vhost, rabbitMQServer);
 
