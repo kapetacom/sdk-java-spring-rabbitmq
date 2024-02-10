@@ -33,36 +33,36 @@ public class RabbitManagementService {
 
     public void ensureVHost(RabbitConnection connection) {
 
-        var operator = connection.getOperator();
-        var vhost = connection.getVhost();
+        final var operator = connection.getOperator();
+        final var vhost = connection.getVhost();
+        final var rabbitMQServer = getBaseUrl(operator);
+        final String getQueuesUrl = "%s/queues/%s".formatted(rabbitMQServer, URLEncoder.encode(vhost, StandardCharsets.UTF_8));
+        final String createVhostsUrl = "%s/vhosts/%s".formatted(rabbitMQServer, URLEncoder.encode(vhost, StandardCharsets.UTF_8));
 
-        var rabbitMQServer = getBaseUrl(operator);
-        var entity = createEntity(operator);
+        var wasFound = defaultRetryTemplate().execute(context -> {
+            var entity = createEntity(operator);
 
-        String getQueuesUrl = "%s/queues/%s".formatted(rabbitMQServer, URLEncoder.encode(vhost, StandardCharsets.UTF_8));
-        String createVhostsUrl = "%s/vhosts/%s".formatted(rabbitMQServer, URLEncoder.encode(vhost, StandardCharsets.UTF_8));
+            log.info("Checking RabbitMQ vhost: {} @ {}", vhost, rabbitMQServer);
 
-        log.info("Checking RabbitMQ vhost: {} @ {}", vhost, rabbitMQServer);
-
-        // We ask for queues on the vhost since that does not require any special permissions.
-        // and will return 404 if the vhost does not exist.
-        // It will return 401 if the vhost exist, but we do not have access.
-        try {
-            restTemplate.exchange(getQueuesUrl, HttpMethod.GET, entity, String.class);
-            log.info("RabbitMQ vhost: {} @ {} was found", vhost, rabbitMQServer);
-            return;
-        } catch (RestClientResponseException e) {
-            if (e.getStatusCode().value() != 404) {
-                // If we get here it likely means we do not have access to the vhost
-                // or we do not have access to the management API
-                throw new IllegalStateException("Failed to get vhost: %s @ %s - HTTP status: %s".formatted(vhost, rabbitMQServer, e.getStatusCode().value()), e);
+            // We ask for queues on the vhost since that does not require any special permissions.
+            // and will return 404 if the vhost does not exist.
+            // It will return 401 if the vhost exist, but we do not have access.
+            try {
+                restTemplate.exchange(getQueuesUrl, HttpMethod.GET, entity, String.class);
+                log.info("RabbitMQ vhost: {} @ {} was found", vhost, rabbitMQServer);
+                return true;
+            } catch (RestClientResponseException e) {
+                if (e.getStatusCode().value() != 404) {
+                    // If we get here it likely means we do not have access to the vhost
+                    // or we do not have access to the management API
+                    log.error("Failed to get vhost: %s @ %s - HTTP status: %s".formatted(vhost, rabbitMQServer, e.getStatusCode().value()), e);
+                    return false;
+                }
             }
-        }
 
-
-        var wasCreated = defaultRetryTemplate().execute(context -> {
             try {
                 restTemplate.exchange(createVhostsUrl, HttpMethod.PUT, entity, String.class);
+                log.info("RabbitMQ vhost: {} @ {} was created", vhost, rabbitMQServer);
                 return true;
             } catch (RestClientResponseException e) {
                 if (e.getStatusCode().value() != 499) {
@@ -75,11 +75,9 @@ public class RabbitManagementService {
             return false;
         });
 
-        if (!wasCreated) {
-            throw new IllegalStateException("Failed to create vhost: %s".formatted(vhost));
+        if (!wasFound) {
+            throw new IllegalStateException("Failed to ensure vhost: %s".formatted(vhost));
         }
-
-        log.info("RabbitMQ vhost: {} @ {} was created", vhost, rabbitMQServer);
 
     }
 
