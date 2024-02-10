@@ -55,24 +55,16 @@ public class RabbitManagementService {
                 if (e.getStatusCode().value() != 404) {
                     // If we get here it likely means we do not have access to the vhost
                     // or we do not have access to the management API
-                    log.error("Failed to get vhost: %s @ %s - HTTP status: %s".formatted(vhost, rabbitMQServer, e.getStatusCode().value()), e);
-                    return false;
+                    // We will keep trying to create the vhost - it might be setting up
+                    throw new IllegalStateException("Failed to get vhost: %s @ %s - HTTP status: %s".formatted(vhost, rabbitMQServer, e.getStatusCode()));
                 }
+
             }
 
-            try {
-                restTemplate.exchange(createVhostsUrl, HttpMethod.PUT, entity, String.class);
-                log.info("RabbitMQ vhost: {} @ {} was created", vhost, rabbitMQServer);
-                return true;
-            } catch (RestClientResponseException e) {
-                if (e.getStatusCode().value() != 499) {
-                    // If we get here it likely means we do not have access to the vhost
-                    // or we do not have access to the management API
-                    throw new IllegalStateException("Failed to create vhost: %s @ %s - HTTP status: %s".formatted(vhost, rabbitMQServer, e.getStatusCode()));
-                }
-                log.error("Failed to create vhost: {} @ {}", vhost, rabbitMQServer, e);
-            }
-            return false;
+            // If we get here it means the vhost does not exist
+            restTemplate.exchange(createVhostsUrl, HttpMethod.PUT, entity, String.class);
+            log.info("RabbitMQ vhost: {} @ {} was created", vhost, rabbitMQServer);
+            return true;
         });
 
         if (!wasFound) {
